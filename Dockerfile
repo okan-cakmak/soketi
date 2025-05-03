@@ -1,4 +1,4 @@
-ARG VERSION=lts
+ARG VERSION=18
 
 FROM --platform=$BUILDPLATFORM node:$VERSION-alpine as build
 
@@ -33,6 +33,7 @@ LABEL org.opencontainers.image.vendor="Soketi"
 LABEL org.opencontainers.image.licenses="AGPL-3.0"
 
 RUN apk add --no-cache libc6-compat ; \
+    rm -f /lib/ld-linux-x86-64.so.2 ; \
     ln -s /lib/libc.musl-x86_64.so.1 /lib/ld-linux-x86-64.so.2
 
 COPY --from=build /app /app

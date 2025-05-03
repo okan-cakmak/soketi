@@ -129,6 +129,10 @@ export class Cli {
         USER_AUTHENTICATION_TIMEOUT: 'userAuthenticationTimeout',
         WEBHOOKS_BATCHING: 'webhooks.batching.enabled',
         WEBHOOKS_BATCHING_DURATION: 'webhooks.batching.duration',
+        QUOTA_MANAGER_ENABLED: 'quotaManager.enabled',
+        QUOTA_MANAGER_DRIVER: 'quotaManager.driver',
+        QUOTA_MANAGER_REDIS_OPTIONS: 'quotaManager.redis.redisOptions',
+        QUOTA_MANAGER_REDIS_CLUSTER_MODE: 'quotaManager.redis.clusterMode',
     };
 
     /**

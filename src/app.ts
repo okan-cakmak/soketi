@@ -29,6 +29,7 @@ export interface AppInterface {
     hasChannelVacatedWebhooks?: boolean;
     hasMemberAddedWebhooks?: boolean;
     hasMemberRemovedWebhooks?: boolean;
+    messageQuota?: string|number;
 }
 
 export interface WebhookInterface {
@@ -170,6 +171,11 @@ export class App implements AppInterface {
      */
     public hasCacheMissedWebhooks = false;
 
+    /**
+     * @type {string|number}
+     */
+    public messageQuota: string|number;
+
     static readonly CLIENT_EVENT_WEBHOOK = 'client_event';
     static readonly CHANNEL_OCCUPIED_WEBHOOK = 'channel_occupied';
     static readonly CHANNEL_VACATED_WEBHOOK = 'channel_vacated';
@@ -199,6 +205,7 @@ export class App implements AppInterface {
         this.maxEventPayloadInKb = parseFloat(this.extractFromPassedKeys(initialApp, ['maxEventPayloadInKb', 'MaxEventPayloadInKb', 'max_event_payload_in_kb'], server.options.eventLimits.maxPayloadInKb));
         this.maxEventBatchSize = parseInt(this.extractFromPassedKeys(initialApp, ['maxEventBatchSize', 'MaxEventBatchSize', 'max_event_batch_size'], server.options.eventLimits.maxBatchSize));
         this.enableUserAuthentication = this.extractFromPassedKeys(initialApp, ['enableUserAuthentication', 'EnableUserAuthentication', 'enable_user_authentication'], false);
+        this.messageQuota = this.extractFromPassedKeys(initialApp, ['messageQuota', 'MessageQuota', 'message_quota'], 100);
 
         this.hasClientEventWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CLIENT_EVENT_WEBHOOK)).length > 0;
         this.hasChannelOccupiedWebhooks = this.webhooks.filter(webhook => webhook.event_types.includes(App.CHANNEL_OCCUPIED_WEBHOOK)).length > 0;
@@ -231,6 +238,7 @@ export class App implements AppInterface {
             maxEventPayloadInKb: this.maxEventPayloadInKb,
             maxEventBatchSize: this.maxEventBatchSize,
             enableUserAuthentication: this.enableUserAuthentication,
+            messageQuota: this.messageQuota,
         }
     }
 

@@ -194,4 +194,12 @@ export interface Options {
             duration: number;
         };
     };
+    quotaManager: {
+        enabled: boolean;
+        driver: string;
+        redis: {
+            redisOptions: RedisOptions|ClusterOptions;
+            clusterMode: boolean;
+        };
+    }
 }

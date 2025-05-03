@@ -18,6 +18,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { WebhookSender } from './webhook-sender';
 import { WebSocket } from 'uWebSockets.js';
 import { WsHandler } from './ws-handler';
+import { QuotaManager, QuotaManagerInterface } from './quota-managers';
 
 const Discover = require('node-discover');
 const queryString = require('query-string');
@@ -243,6 +244,22 @@ export class Server {
                 duration: 50,
             },
         },
+        quotaManager: {
+            enabled: true,
+            driver: 'redis',
+            redis: {
+                redisOptions: {
+                    host: 'localhost',
+                    port: 6379,
+                    db: 0,
+                    username: null,
+                    password: null,
+                    keyPrefix: '',
+                    sentinels: null,
+                },
+                clusterMode: false,
+            },
+        },
     };
 
     /**
@@ -321,6 +338,11 @@ export class Server {
     public discover: typeof Discover;
 
     /**
+     * The quota manager.
+     */
+    public quotaManager: QuotaManagerInterface;
+
+    /**
      * Initialize the server.
      */
     constructor(options = {}) {
@@ -390,6 +412,10 @@ export class Server {
 
                                     if (this.options.metrics.enabled) {
                                         Log.successTitle(`🌠 Prometheus /metrics endpoint is available on port ${this.options.metrics.port}.`);
+                                    }
+
+                                    if (this.options.quotaManager.enabled) {
+                                        Log.successTitle(`🎉 The quota manager is enabled and available with the following options: ${JSON.stringify(this.options.quotaManager)}`);
                                     }
 
                                     Log.br();
@@ -474,7 +500,15 @@ export class Server {
             this.setQueueManager(new Queue(this)),
             this.setCacheManager(new CacheManager(this)),
             this.setWebhookSender(),
+            this.setQuotaManager(new QuotaManager(this)),
         ]);
+    }
+
+    /**
+     * Set the quota manager.
+     */
+    setQuotaManager(instance: QuotaManagerInterface): void {
+        this.quotaManager = instance;
     }
 
     /**

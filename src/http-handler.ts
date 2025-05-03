@@ -271,11 +271,13 @@ export class HttpHandler {
             this.appMiddleware,
             this.authMiddleware,
             this.broadcastEventRateLimitingMiddleware,
+            this.quotaMiddleware,
         ]).then(res => {
             this.checkMessageToBroadcast(res.body as PusherApiMessage, res.app as App).then(message => {
                 this.broadcastMessage(message, res.app.id);
                 this.server.metricsManager.markApiMessage(res.app.id, res.body, { ok: true });
                 this.sendJson(res, { ok: true });
+                this.server.quotaManager.incrementCount(res.app.id, 1);
             }).catch(error => {
                 if (error.code === 400) {
                     this.badResponse(res, error.message);
@@ -375,22 +377,28 @@ export class HttpHandler {
     }
 
     protected broadcastMessage(message: PusherApiMessage, appId: string): void {
-        message.channels.forEach(channel => {
-            let msg = {
-                event: message.name,
-                channel,
-                data: message.data,
-            };
-
-            this.server.adapter.send(appId, channel, JSON.stringify(msg), message.socket_id);
-
-            if (Utils.isCachingChannel(channel)) {
-                this.server.cacheManager.set(
-                    `app:${appId}:channel:${channel}:cache_miss`,
-                    JSON.stringify({ event: msg.event, data: msg.data }),
-                    this.server.options.channelLimits.cacheTtl,
-                );
+        this.server.appManager.findById(appId).then(app => {
+            if (!app) {
+                return;
             }
+
+            message.channels.forEach(channel => {
+                let msg = {
+                    event: message.name,
+                    channel,
+                    data: message.data,
+                };
+                
+                this.server.adapter.send(appId, channel, JSON.stringify(msg), message.socket_id);
+
+                if (Utils.isCachingChannel(channel)) {
+                    this.server.cacheManager.set(
+                        `app:${appId}:channel:${channel}:cache_miss`,
+                        JSON.stringify({ event: msg.event, data: msg.data }),
+                        this.server.options.channelLimits.cacheTtl,
+                    );
+                }
+            });
         });
     }
 
@@ -428,6 +436,10 @@ export class HttpHandler {
 
     protected tooManyRequestsResponse(res: HttpResponse) {
         return this.sendJson(res, { error: 'Too many requests.', code: 429 }, '429 Too Many Requests');
+    }
+
+    protected upgradeRequiredResponse(res: HttpResponse) {
+        return this.sendJson(res, { error: 'Upgrade required.', code: 426 }, '426 Upgrade Required');
     }
 
     protected serverErrorResponse(res: HttpResponse, error: string) {
@@ -512,6 +524,16 @@ export class HttpHandler {
             }
 
             this.tooManyRequestsResponse(res);
+        });
+    }
+
+    protected quotaMiddleware(res: HttpResponse, next: CallableFunction): any {
+        this.server.quotaManager.hasRemainingQuota(res.app).then(hasQuota => {
+            if (hasQuota) {
+                return next(null, res);
+            }
+
+            this.upgradeRequiredResponse(res);
         });
     }
 

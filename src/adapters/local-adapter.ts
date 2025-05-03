@@ -161,17 +161,20 @@ export class LocalAdapter implements AdapterInterface {
             let userId = channel.split('#server-to-user-').pop();
 
             this.getUserSockets(appId, userId).then(sockets => {
+                let messageCount = 0;
                 sockets.forEach(ws => {
                     if (ws.sendJson) {
                         ws.sendJson(JSON.parse(data));
+                        messageCount++;
                     }
                 });
+                this.server.quotaManager.incrementCount(appId, messageCount);
             });
-
             return;
         }
 
         this.getNamespace(appId).getChannelSockets(channel).then(sockets => {
+            let messageCount = 0;
             sockets.forEach((ws) => {
                 if (exceptingId && exceptingId === ws.id) {
                     return;
@@ -180,8 +183,10 @@ export class LocalAdapter implements AdapterInterface {
                 // Fix race conditions.
                 if (ws.sendJson) {
                     ws.sendJson(JSON.parse(data));
+                    messageCount++;
                 }
             });
+            this.server.quotaManager.incrementCount(appId, messageCount);
         });
     }
 
